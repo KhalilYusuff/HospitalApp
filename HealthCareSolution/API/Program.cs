@@ -1,7 +1,8 @@
 using API.Data;
 using API.dto;
-using API.model;
+using API.Model;
 using System.Linq;
+using System.Threading.Tasks;
 
 using Microsoft.EntityFrameworkCore;
 
@@ -31,8 +32,6 @@ var app = builder.Build();
 app.UseCors(MyAllowSpecificOrigins);
 
 
-
-
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
@@ -42,6 +41,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+//Get ALl patients from Db
 app.MapGet("/patients", async (AppDbContext db) => { 
     var patients = await db.Patients.ToListAsync();
 
@@ -49,21 +49,40 @@ app.MapGet("/patients", async (AppDbContext db) => {
  
 });
 
-app.MapPost("/patients", async (AppDbContext db, PatientDto dto) =>
+
+//Get patient based in id
+app.MapGet("/patient", async (AppDbContext db, int pId) =>
 {
-    var patient = dto.toPatient();
+    return await db.Patients.FirstOrDefaultAsync( p => p.Id == pId);
+});
+
+
+//add a patientDto to DB
+app.MapPost("/patients", async (AppDbContext db, CreatePatientDto dto) =>
+{
+    var patient = dto.ToPatient();
 
     db.Patients.Add(patient);
 
     await db.SaveChangesAsync();
     
-    
     return Results.Created($"/patients{patient.Id}", patient.toDto());
 });
 
+
+
+//get all appointments (Need to create an AppointmentDto)
 app.MapGet("/appointments", async (AppDbContext db) =>
     await db.Appointments.ToListAsync());
 
+app.MapPost("/appointment", async (AppDbContext db, Appointment app) =>
+{
+    db.Appointments.Add(app);
+    await db.SaveChangesAsync();
+
+    return Results.Created($"/appointment{app.Id}", app);
+
+});
 
 app.Run();
 

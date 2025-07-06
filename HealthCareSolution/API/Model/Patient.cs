@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using API.dto;
 
-namespace API.model
+namespace API.Model
 {
     public class Patient : AbstractUser
     {
@@ -17,16 +17,19 @@ namespace API.model
        public PatientDto toDto()
         {
 
-            PatientDto dto = new PatientDto(
+           return new PatientDto
+            {
                 FirstName = this.FirstName,
                 LastName = this.LastName,
                 Gender = this.Gender,
                 Birthdate = this.Birthdate,
                 Email = this.Email,
-                PhoneNumber = this.PhoneNumber
-                );
-            return dto;
+                PhoneNumber = this.PhoneNumber,
+                
+            };
         }
+
+        
 
     }
 

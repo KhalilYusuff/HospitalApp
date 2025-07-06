@@ -1,7 +1,7 @@
 ﻿namespace API.Data
 {
     using Microsoft.EntityFrameworkCore;
-    using API.model;
+    using API.Model;
     using Microsoft.Identity.Client;
 
     public class AppDbContext : DbContext

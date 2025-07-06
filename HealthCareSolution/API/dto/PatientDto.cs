@@ -1,6 +1,6 @@
 ﻿namespace API.dto
 {
-    using API.model;
+    using API.Model;
 
     public class PatientDto
     {
@@ -13,19 +13,6 @@
         public string PhoneNumber { get; set; } = "";
 
 
-        public Patient toPatient()
-        {
-            Patient p = new Patient(
-                
-                FirstName = this.FirstName,
-                LastName = this.LastName,
-                Gender = this.Gender,
-                Birthdate = this.Birthdate,
-                Email = this.Email,
-                PhoneNumber = this.PhoneNumber
-                );
-            return p;
-        }
 
     }
 }

@@ -25,6 +25,7 @@ builder.Services.AddCors(options =>
         .AllowAnyMethod()
         .AllowAnyHeader();
     });
+
 });
 
 
@@ -49,11 +50,19 @@ app.MapGet("/patients", async (AppDbContext db) => {
  
 });
 
+//get all appointments (Need to create an AppointmentDto)
+app.MapGet("/appointments", async (AppDbContext db) => {
+    var appoinments = await db.Appointments.ToListAsync();
+    return appoinments.Select(a => a.toDto()).ToList();
+
+    });
+
 
 //Get patient based in id
 app.MapGet("/patient", async (AppDbContext db, int pId) =>
 {
-    return await db.Patients.FirstOrDefaultAsync( p => p.Id == pId);
+    var patient = await db.Patients.FirstOrDefaultAsync( p => p.Id == pId);
+    return patient.toDto();
 });
 
 
@@ -71,13 +80,19 @@ app.MapPost("/patients", async (AppDbContext db, CreatePatientDto dto) =>
 
 
 
-//get all appointments (Need to create an AppointmentDto)
-app.MapGet("/appointments", async (AppDbContext db) =>
-    await db.Appointments.ToListAsync());
-
-app.MapPost("/appointment", async (AppDbContext db, Appointment app) =>
+app.MapPost("/appointment", async (AppDbContext db, AppointmentDto dto) =>
 {
-    db.Appointments.Add(app);
+    var p = db.Patients.FirstOrDefaultAsync(p => p.Id == dto.PatientID);
+    var d = db.Doctors.FirstOrDefaultAsync(d => d.Id == dto.DoctorID);
+    var a = new Appointment
+    {
+       p,
+       d,
+       dto.Date,
+       dto.Status
+    };
+
+    db.Appointments.Add(a);
     await db.SaveChangesAsync();
 
     return Results.Created($"/appointment{app.Id}", app);

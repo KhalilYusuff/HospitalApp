@@ -2,7 +2,8 @@
 {
     using API.Model;
 
-    public class PatientDto
+    public class ResponsePatientDto
+
     {
         
         public string FirstName { get; set; } = "";

@@ -14,7 +14,7 @@ namespace API.Model
        public List<JournalEntry> JournalEntries { get; set; }
 
 
-       public PatientDto toDto()
+       public ResponsePatientDto toDto()
         {
 
            return new PatientDto

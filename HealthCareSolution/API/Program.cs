@@ -50,11 +50,16 @@ app.MapGet("/patients", async (AppDbContext db) => {
  
 });
 
+app.MapGet("/Doctors", async (AppDbContext db) =>
+{
+    var doctors = await db.Doctors.ToListAsync();
+    return doctors.Select(d => d.toDto()).ToList();
+});
+
 //get all appointments (Need to create an AppointmentDto)
 app.MapGet("/appointments", async (AppDbContext db) => {
     var appoinments = await db.Appointments.ToListAsync();
     return appoinments.Select(a => a.toDto()).ToList();
-
     });
 
 
@@ -62,7 +67,22 @@ app.MapGet("/appointments", async (AppDbContext db) => {
 app.MapGet("/patient", async (AppDbContext db, int pId) =>
 {
     var patient = await db.Patients.FirstOrDefaultAsync( p => p.Id == pId);
+    if (patient == null)
+    {
+        return Results.NotFound($"Did not find patient with id: {pId}")
+    }
     return patient.toDto();
+});
+app.MapGet("/Doctor", async (AppDbContext db, int id) =>
+{
+    var doctor = await db.Doctors.FirstOrDefaultAsync(d => d.Id = id);
+    if (doctor == null)
+    {
+        return Results.NotFound($"Did not find the doctor with id: {id}")
+    }
+
+    return doctor.toDto(); 
+
 });
 
 
@@ -78,24 +98,38 @@ app.MapPost("/patients", async (AppDbContext db, CreatePatientDto dto) =>
     return Results.Created($"/patients{patient.Id}", patient.toDto());
 });
 
-
-
 app.MapPost("/appointment", async (AppDbContext db, AppointmentDto dto) =>
 {
-    var p = db.Patients.FirstOrDefaultAsync(p => p.Id == dto.PatientID);
-    var d = db.Doctors.FirstOrDefaultAsync(d => d.Id == dto.DoctorID);
-    var a = new Appointment
-    {
-       p,
-       d,
-       dto.Date,
-       dto.Status
+    var p =  await db.Patients.FirstOrDefaultAsync(p => p.Id == dto.PatientID);
+    var d =  await db.Doctors.FirstOrDefaultAsync(d => d.Id == dto.DoctorID);
+
+
+    if (p == null || d == null) {
+
+        return Results.NotFound("Doctor or patient not found");
+    };
+    var appointment = new Appointment
+   {
+       Patient = p,
+       Doctor = d, 
+       AppointmentDate = dto.Date,
+       Status = dto.Status
     };
 
-    db.Appointments.Add(a);
+    db.Appointments.Add(appointment);
     await db.SaveChangesAsync();
 
-    return Results.Created($"/appointment{app.Id}", app);
+    return Results.Created($"/appointment{appointment.Id}", appointment.toDto());
+
+});
+
+app.MapPost("/Doctor", async (AppDbContext db, CreateDoctorDto dto) =>
+{
+    var doctor = dto.toDoctor();
+    db.Doctors.Add(doctor);
+
+    await db.SaveChangesAsync();
+    return Results.Created($"/Doctor{doctor.Id}", doctor.toDto());
 
 });
 

@@ -17,8 +17,8 @@ namespace API.Model
        public ResponsePatientDto toDto()
         {
 
-           return new PatientDto
-            {
+           return new ResponsePatientDto
+           {
                 FirstName = this.FirstName,
                 LastName = this.LastName,
                 Gender = this.Gender,

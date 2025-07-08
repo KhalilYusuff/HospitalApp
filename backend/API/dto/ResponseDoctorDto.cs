@@ -13,6 +13,7 @@ namespace API.dto {
         public string PhoneNumber { get; set; } = "";
         public string Specialization { get; set; } = "";
         
+        
 
     }
 }

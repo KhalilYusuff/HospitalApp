@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading.Tasks;
 
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Mvc;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -43,12 +44,13 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 
 //Get ALl patients from Db
-app.MapGet("/patients", async (AppDbContext db) => { 
+app.MapGet("/patients", async (AppDbContext db, ILogger<Program> _logger) => {
+    _logger.Log(LogLevel.Information, "Getting all patients...");
     var patients = await db.Patients.ToListAsync();
 
     return patients.Select(p => p.toDto()).ToList();
  
-});
+}).WithName("GetAllPatients").Produces<IEnumerable<ResponsePatientDto>>(200);
 
 app.MapGet("/Doctors", async (AppDbContext db) =>
 {
@@ -63,25 +65,26 @@ app.MapGet("/appointments", async (AppDbContext db) => {
     });
 
 
-//Get patient based in id
-app.MapGet("/patient", async (AppDbContext db, int pId) =>
+//Get patient based on id
+app.MapGet("/Patient/{pId:int}", async (AppDbContext db, int pId) =>
 {
     var patient = await db.Patients.FirstOrDefaultAsync( p => p.Id == pId);
     if (patient == null)
     {
-        return Results.NotFound($"Did not find patient with id: {pId}")
+        return Results.NotFound($"Did not find patient with id: {pId}");
     }
-    return patient.toDto();
-});
-app.MapGet("/Doctor", async (AppDbContext db, int id) =>
+    return Results.Ok(patient.toDto());
+}).WithName("GetPatient");
+
+app.MapGet("/Doctor/{dId:int}", async (AppDbContext db, int dId) =>
 {
-    var doctor = await db.Doctors.FirstOrDefaultAsync(d => d.Id = id);
+    var doctor = await db.Doctors.FirstOrDefaultAsync(d => d.Id == dId);
     if (doctor == null)
     {
-        return Results.NotFound($"Did not find the doctor with id: {id}")
+        return Results.NotFound($"Did not find the doctor with id: {dId}");
     }
 
-    return doctor.toDto(); 
+    return Results.Ok(doctor.toDto());
 
 });
 
@@ -95,13 +98,13 @@ app.MapPost("/patients", async (AppDbContext db, CreatePatientDto dto) =>
 
     await db.SaveChangesAsync();
     
-    return Results.Created($"/patients{patient.Id}", patient.toDto());
-});
+    return Results.Created($"/patients/{patient.Id}", patient.toDto());
+}).WithName("CreatePatient").Produces<ResponsePatientDto>(201).Produces(400);
 
 app.MapPost("/appointment", async (AppDbContext db, AppointmentDto dto) =>
 {
     var p =  await db.Patients.FirstOrDefaultAsync(p => p.Id == dto.PatientID);
-    var d =  await db.Doctors.FirstOrDefaultAsync(d => d.Id == dto.DoctorID);
+    var d = await db.Doctors.FirstOrDefaultAsync(d => d.Id == dto.DoctorID);
 
 
     if (p == null || d == null) {
@@ -119,17 +122,17 @@ app.MapPost("/appointment", async (AppDbContext db, AppointmentDto dto) =>
     db.Appointments.Add(appointment);
     await db.SaveChangesAsync();
 
-    return Results.Created($"/appointment{appointment.Id}", appointment.toDto());
+    return Results.Created($"/appointment/{appointment.Id}", appointment.toDto());
 
 });
 
-app.MapPost("/Doctor", async (AppDbContext db, CreateDoctorDto dto) =>
+app.MapPost("/Doctor/", async (AppDbContext db, CreateDoctorDto dto) =>
 {
     var doctor = dto.toDoctor();
     db.Doctors.Add(doctor);
 
     await db.SaveChangesAsync();
-    return Results.Created($"/Doctor{doctor.Id}", doctor.toDto());
+    return Results.Created($"/Doctor/{doctor.Id}", doctor.toDto());
 
 });
 

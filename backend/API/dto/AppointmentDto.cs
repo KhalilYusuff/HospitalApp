@@ -10,7 +10,7 @@ namespace API.dto
 		public int PatientID { get; set;  }
 		public int DoctorID { get; set; }
 		public DateTime Date { get; set; }
-		public string Status { get; set;  }
+		public string Status { get; set; } = "";
 
 	}
 }

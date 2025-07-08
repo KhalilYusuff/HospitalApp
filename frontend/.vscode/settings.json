@@ -1,0 +1,21 @@
+{
+    "sqltools.connections": [
+        {
+            "connectionTimeout": 15,
+            "mssqlOptions": {
+                "appName": "SQLTools",
+                "useUTC": true,
+                "encrypt": true,
+                "trustServerCertificate": false
+            },
+            "previewLimit": 50,
+            "server": "Intune-B1W3T74",
+            "driver": "MSSQL",
+            "name": "Intune-B1W3T74",
+            "password": "Liilo9900",
+            "connectString": "Server=Intune-B1W3T74;Database=HCSdb;User Id=sa;Password=Liilo9900;",
+            "database": "HCSdb",
+            "username": "sa"
+        }
+    ]
+}

@@ -1,0 +1,23 @@
+.patient-table{
+    width: 100;
+    border-collapse: collapse;
+    margin-top: 16px; 
+    font-family: Arial, sans-serif;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+}
+.patient-table thead{
+    background-color: #007acc;
+    color: white;
+
+}
+.patient-table th, .patient-table td{
+    padding: 12px; 
+    text-align: left; 
+    border-bottom: 1px solid #ddd;
+}
+.patient-table td:hover{
+    background-color: grey;
+}
+.patient-table td{
+    color: #333;
+}

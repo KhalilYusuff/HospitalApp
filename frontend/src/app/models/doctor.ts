@@ -1,8 +1,9 @@
-export interface Patient {
+export interface Doctor{
   firstName: string;
   lastName: string;
   gender: string;
   birthdate: string;
   email: string;
-  phonenumber: string;
+  phoneNumber: string;
+  specialization: string
 }

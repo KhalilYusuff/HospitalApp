@@ -1,4 +1,5 @@
-﻿using System;
+﻿using backend.API.dto;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -19,7 +20,22 @@ namespace API.Model
         public Doctor Doctor { get; set; }
         public int DoctorID { get; set; }
 
+        public CreateJournalEntryDto toDto()
+        {
+
+            return new CreateJournalEntryDto
+            {
+                Notes = this.Notes,
+                DateNTime = this.DateNTime,
+                PatientID = this.PatientID,
+                DoctorID = this.DoctorID    
+            };
+
+        }
+
     } 
 
+
+   
 
 }

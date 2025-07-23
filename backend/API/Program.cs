@@ -1,11 +1,15 @@
 using API.Data;
 using API.dto;
 using API.Model;
-using System.Linq;
-using System.Threading.Tasks;
-
-using Microsoft.EntityFrameworkCore;
+using Azure;
+using backend.API.dto;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata.Internal;
+using Microsoft.EntityFrameworkCore.Update;
+using System.Linq;
+using System.Net;
+using System.Threading.Tasks;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -23,7 +27,7 @@ builder.Services.AddCors(options =>
         policy =>
     {
         policy.WithOrigins("http://localhost:4200")
-        .AllowAnyMethod()
+        .AllowAnyMethod() 
         .AllowAnyHeader();
     });
 
@@ -46,23 +50,42 @@ app.UseHttpsRedirection();
 //Get ALl patients from Db
 app.MapGet("/patients", async (AppDbContext db, ILogger<Program> _logger) => {
     _logger.Log(LogLevel.Information, "Getting all patients...");
+
+    ApiResponse response = new();
+
     var patients = await db.Patients.ToListAsync();
 
-    return patients.Select(p => p.toDto()).ToList();
+    response.Result = patients.Select(p => p.toDto()).ToList();
+    response.IsSuccess = true;
+    response.StatusCode = HttpStatusCode.OK;
+    return Results.Ok(response);
  
-}).WithName("GetAllPatients").Produces<IEnumerable<ResponsePatientDto>>(200);
+}).WithName("GetAllPatients").Produces<ApiResponse>(200);
 
 app.MapGet("/Doctors", async (AppDbContext db) =>
 {
+    ApiResponse response = new();
+
     var doctors = await db.Doctors.ToListAsync();
-    return doctors.Select(d => d.toDto()).ToList();
-});
+
+    response.Result = doctors.Select(d => d.toDto()).ToList();
+    response.IsSuccess = true;
+    response.StatusCode = HttpStatusCode.OK;
+    return Results.Ok(response);
+}).WithName("GetAllDoctors").Produces<ApiResponse>(200);
 
 //get all appointments (Need to create an AppointmentDto)
 app.MapGet("/appointments", async (AppDbContext db) => {
+
+    ApiResponse response = new();
     var appoinments = await db.Appointments.ToListAsync();
-    return appoinments.Select(a => a.toDto()).ToList();
-    });
+
+    response.Result = appoinments.Select(a => a.toDto()).ToList();
+    response.IsSuccess = true;
+    response.StatusCode = HttpStatusCode.OK;
+    return Results.Ok(response);
+
+    }).WithName("GetAllAppointments").Produces<ApiResponse>(200); ;
 
 
 //Get patient based on id
@@ -101,15 +124,20 @@ app.MapPost("/patients", async (AppDbContext db, CreatePatientDto dto) =>
     return Results.Created($"/patients/{patient.Id}", patient.toDto());
 }).WithName("CreatePatient").Produces<ResponsePatientDto>(201).Produces(400);
 
+
 app.MapPost("/appointment", async (AppDbContext db, AppointmentDto dto) =>
 {
+    ApiResponse response = new() { IsSuccess = false, StatusCode = HttpStatusCode.NotFound }; 
+
     var p =  await db.Patients.FirstOrDefaultAsync(p => p.Id == dto.PatientID);
     var d = await db.Doctors.FirstOrDefaultAsync(d => d.Id == dto.DoctorID);
 
 
     if (p == null || d == null) {
 
-        return Results.NotFound("Doctor or patient not found");
+        response.ErrorMessages.Add("Doctor or patient not found");
+
+        return Results.NotFound(response);
     };
     var appointment = new Appointment
    {
@@ -119,22 +147,102 @@ app.MapPost("/appointment", async (AppDbContext db, AppointmentDto dto) =>
        Status = dto.Status
     };
 
+
     db.Appointments.Add(appointment);
     await db.SaveChangesAsync();
 
-    return Results.Created($"/appointment/{appointment.Id}", appointment.toDto());
+    response.Result = appointment.toDto();
+    response.IsSuccess = true;
+    response.StatusCode = HttpStatusCode.OK;
 
-});
+    return Results.Ok(response);
+
+}).WithName("CreateAppointment").Accepts<AppointmentDto>("json/application").Produces<ApiResponse>(201).Produces(404);
 
 app.MapPost("/Doctor/", async (AppDbContext db, CreateDoctorDto dto) =>
 {
+    ApiResponse response = new() { IsSuccess = false, StatusCode = HttpStatusCode.BadRequest}; 
+
+
     var doctor = dto.toDoctor();
+
+    if (doctor == null)
+    {
+        response.ErrorMessages.Add("Could not create the Doctor object!");
+        return Results.BadRequest(response);
+    }
+
     db.Doctors.Add(doctor);
-
     await db.SaveChangesAsync();
-    return Results.Created($"/Doctor/{doctor.Id}", doctor.toDto());
 
-});
+    response.IsSuccess = true;
+    response.StatusCode = HttpStatusCode.OK;
+    
+
+    return Results.Ok(response);
+
+}).WithName("CreateDoctor").Accepts<CreateDoctorDto>("application(json").Produces<ApiResponse>(201).Produces(400);
+
+
+app.MapPost("/JournalEntry", async (AppDbContext db, CreateJournalEntryDto dto) =>
+{
+
+    ApiResponse response = new() { IsSuccess = false, StatusCode = HttpStatusCode.NotFound };
+
+    var p = await db.Patients.FirstOrDefaultAsync(p => p.Id == dto.PatientID);
+    var d = await db.Doctors.FirstOrDefaultAsync(d => d.Id == dto.DoctorID);
+
+    if (p == null || d == null)
+    {
+        response.ErrorMessages.Add("Could not find the doctor or the patient!");
+
+        return Results.NotFound(response);
+    }
+
+    JournalEntry entry = new JournalEntry
+    {
+        Notes = dto.Notes,
+        DateNTime = dto.DateNTime,
+        Patient = p,
+        PatientID = dto.PatientID,
+        Doctor = d,
+        DoctorID = dto.DoctorID
+
+    };
+
+    db.JournalEntries.Add(entry);
+    await db.SaveChangesAsync();
+
+    response.Result = entry.toDto();
+    response.IsSuccess = true;
+    response.StatusCode = HttpStatusCode.OK;
+    
+    return Results.Ok(response);
+
+}).WithName("CreateJournal").Accepts<CreateJournalEntryDto>("application/json").Produces<ApiResponse>(201).Produces(400);
+
+
+
+
+app.MapGet("/JournalEntries/{id:int}", async (AppDbContext db, int id) =>
+{
+    ApiResponse response = new() { IsSuccess = false, StatusCode = HttpStatusCode.NotFound };
+    
+    var entry = await db.JournalEntries.FirstOrDefaultAsync(e => e.Id == id);
+    
+    if (entry == null)
+    {
+        response.ErrorMessages.Add("Could not find the journal entry");
+        return Results.NotFound(response);
+    }
+     
+    response.Result = entry.toDto();
+    response.IsSuccess = true;
+    response.StatusCode = HttpStatusCode.OK;
+    return Results.Ok(response);
+
+}).WithName("GetJournalByID").Produces<ApiResponse>(200).Produces(404);
+
 
 app.Run();
 

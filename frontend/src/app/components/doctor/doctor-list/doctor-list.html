@@ -1,0 +1,31 @@
+<h2> Doctors </h2>
+
+<table class="doctor-table" *ngIf="doctors && doctors.length>0; else noDoctors">
+  <thead>
+    <tr>
+      <th>First name</th>
+      <th>Last name</th>
+      <th>Gender</th>
+      <th>Birthdate</th>
+      <th>Email</th>
+      <th>PhoneNumber</th>
+      <th>Specialization</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr *ngFor="let d of doctors">
+      <td>{{d.firstName}}</td>
+      <td>{{d.lastName}}</td>
+      <td>{{d.gender}}</td>
+      <td>{{d.birthdate}}</td>
+      <td>{{d.email}}</td>
+      <td>{{d.phoneNumber}}</td>
+      <td>{{d.specialization}}</td>
+    </tr>
+  </tbody>
+</table>
+
+<ng-template #noDoctors> 
+  <p>No doctors found.</p>
+
+</ng-template>

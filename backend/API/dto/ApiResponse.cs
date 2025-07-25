@@ -6,7 +6,7 @@ namespace backend.API.dto
     {
         public ApiResponse()
         {
-            List<string> ErrorMessages = new List<string>();
+            List<string> ErrorMessages = [];
         }
         
 

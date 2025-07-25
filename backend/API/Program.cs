@@ -1,8 +1,11 @@
 using API.Data;
 using API.dto;
 using API.Model;
+using API.PasswordHelper;
 using Azure;
 using backend.API.dto;
+using backend.API.FieldValidator;
+using backend.API.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Internal;
@@ -15,6 +18,9 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+builder.Services.AddScoped<PasswordValidator>();
+builder.Services.AddScoped(typeof(UserService<>));
+builder.Services.AddScoped<PasswordLogic>();
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
@@ -127,7 +133,7 @@ app.MapPost("/patients", async (AppDbContext db, CreatePatientDto dto) =>
 
 app.MapPost("/appointment", async (AppDbContext db, AppointmentDto dto) =>
 {
-    ApiResponse response = new() { IsSuccess = false, StatusCode = HttpStatusCode.NotFound }; 
+    ApiResponse response = new() { IsSuccess = false, StatusCode = HttpStatusCode.NotFound, ErrorMessages = new List<string>() }; 
 
     var p =  await db.Patients.FirstOrDefaultAsync(p => p.Id == dto.PatientID);
     var d = await db.Doctors.FirstOrDefaultAsync(d => d.Id == dto.DoctorID);
@@ -161,7 +167,7 @@ app.MapPost("/appointment", async (AppDbContext db, AppointmentDto dto) =>
 
 app.MapPost("/Doctor/", async (AppDbContext db, CreateDoctorDto dto) =>
 {
-    ApiResponse response = new() { IsSuccess = false, StatusCode = HttpStatusCode.BadRequest}; 
+    ApiResponse response = new() { IsSuccess = false, StatusCode = HttpStatusCode.BadRequest, ErrorMessages = new List<string>() }; 
 
 
     var doctor = dto.toDoctor();
@@ -187,7 +193,7 @@ app.MapPost("/Doctor/", async (AppDbContext db, CreateDoctorDto dto) =>
 app.MapPost("/JournalEntry", async (AppDbContext db, CreateJournalEntryDto dto) =>
 {
 
-    ApiResponse response = new() { IsSuccess = false, StatusCode = HttpStatusCode.NotFound };
+    ApiResponse response = new() { IsSuccess = false, StatusCode = HttpStatusCode.NotFound, ErrorMessages = new List<string>() };
 
     var p = await db.Patients.FirstOrDefaultAsync(p => p.Id == dto.PatientID);
     var d = await db.Doctors.FirstOrDefaultAsync(d => d.Id == dto.DoctorID);
@@ -226,7 +232,7 @@ app.MapPost("/JournalEntry", async (AppDbContext db, CreateJournalEntryDto dto) 
 
 app.MapGet("/JournalEntries/{id:int}", async (AppDbContext db, int id) =>
 {
-    ApiResponse response = new() { IsSuccess = false, StatusCode = HttpStatusCode.NotFound };
+    ApiResponse response = new() { IsSuccess = false, StatusCode = HttpStatusCode.NotFound, ErrorMessages = new List<string>() };
     
     var entry = await db.JournalEntries.FirstOrDefaultAsync(e => e.Id == id);
     
@@ -243,6 +249,48 @@ app.MapGet("/JournalEntries/{id:int}", async (AppDbContext db, int id) =>
 
 }).WithName("GetJournalByID").Produces<ApiResponse>(200).Produces(404);
 
+
+app.MapPost("/Doctors{id:int}/password", async (AppDbContext db, int id, UserService<Doctor> docService, string password, PasswordValidator passwordValidator) =>
+{
+    ApiResponse response = new() { IsSuccess = false, StatusCode = HttpStatusCode.BadRequest, ErrorMessages = new List<string>() };
+
+    //validate password
+    if (!passwordValidator.PasswordValid(password))
+    {
+        response.ErrorMessages.Add("Could not validate the password, please choose a valid password!");
+        return Results.BadRequest(response);
+    }
+
+    //hash the pass 
+    response = await docService.SavePasswordToDB(id, password);
+
+
+    return Results.Ok(response); 
+
+}).WithName("CreatePassWordDoctor").Produces<ApiResponse>(200).Produces(400);
+
+app.MapPost("/Patients{id:int}/password", async (AppDbContext db, int id, UserService<Patient> patientService, string password, PasswordValidator passwordValidator, ILogger<Program> _logger) =>
+{
+    ApiResponse response = new() { IsSuccess = false, StatusCode = HttpStatusCode.BadRequest, ErrorMessages = new List<string>() };
+
+    _logger.Log(LogLevel.Information, "testing line");
+
+    if (!passwordValidator.PasswordValid(password))
+    {
+        _logger.Log(LogLevel.Information, "testing second point");
+        response.ErrorMessages.Add("Could not validate the password, please choose a valid password!");
+        return Results.BadRequest(response);
+    }
+    
+    response = await patientService.SavePasswordToDB(id, password);
+
+
+    return Results.Ok(response);
+
+}).WithName("CreatePassWordPatient").Produces<ApiResponse>(200).Produces(400);
+
+
+ 
 
 app.Run();
 

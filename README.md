@@ -12,7 +12,7 @@
 
 ## Run locally
 
-- Backend: `dotnet watch run` (in `/api`)
+- Backend: `dotnet watch run` (in `/backend`)
 - Frontend: `ng serve` (in `/frontend`)
 
 ## Git

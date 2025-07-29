@@ -5,11 +5,16 @@ using API.PasswordHelper;
 using Azure;
 using backend.API.dto;
 using backend.API.FieldValidator;
+using backend.API.Model;
 using backend.API.Services;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using Microsoft.EntityFrameworkCore.Update;
+using Microsoft.OpenApi.Models;
+using Scalar;
+using Scalar.AspNetCore;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
@@ -19,11 +24,24 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 builder.Services.AddScoped<PasswordValidator>();
-builder.Services.AddScoped(typeof(UserService<>));
+
+builder.Services.AddScoped(typeof(IUserService<,>), typeof(UserService<,>));
+
 builder.Services.AddScoped<PasswordLogic>();
+builder.Services.AddScoped<AppointmentService>();
+builder.Services.AddScoped<JournalEntryService>();
 
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(options =>
+{
+    options.SwaggerDoc("v1", new OpenApiInfo
+    {
+        Title = "Hospital API",
+        Version = "v1",
+        Description = "Khalil sitt prosjekt"
+    });
+});
+
 
 var MyAllowSpecificOrigins = "_myAllowSpecificOrigins";
 
@@ -49,248 +67,145 @@ if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
+
 }
+
+ 
 
 app.UseHttpsRedirection();
 
-//Get ALl patients from Db
-app.MapGet("/patients", async (AppDbContext db, ILogger<Program> _logger) => {
+
+app.MapGet("/api/all-patients", async ([FromServices]IUserService<Patient, CreatePatientDto> patientService, [FromServices] ILogger<Program> _logger) => {
     _logger.Log(LogLevel.Information, "Getting all patients...");
 
-    ApiResponse response = new();
+    var results = await patientService.GetAllUsers();
 
-    var patients = await db.Patients.ToListAsync();
-
-    response.Result = patients.Select(p => p.toDto()).ToList();
-    response.IsSuccess = true;
-    response.StatusCode = HttpStatusCode.OK;
-    return Results.Ok(response);
+    return results.IsSuccess ? Results.Ok(results) : Results.BadRequest(results); 
  
 }).WithName("GetAllPatients").Produces<ApiResponse>(200);
 
-app.MapGet("/Doctors", async (AppDbContext db) =>
-{
-    ApiResponse response = new();
 
-    var doctors = await db.Doctors.ToListAsync();
+app.MapGet("/api/all-doctors", async ([FromServices] IUserService<Doctor, CreateDoctorDto> doctorService, [FromServices] ILogger<Program> _logger) => {
+    _logger.Log(LogLevel.Information, "Getting all patients...");
 
-    response.Result = doctors.Select(d => d.toDto()).ToList();
-    response.IsSuccess = true;
-    response.StatusCode = HttpStatusCode.OK;
-    return Results.Ok(response);
+    var results = await doctorService.GetAllUsers();
+
+    return results.IsSuccess ? Results.Ok(results) : Results.BadRequest(results);
+
 }).WithName("GetAllDoctors").Produces<ApiResponse>(200);
 
 //get all appointments (Need to create an AppointmentDto)
-app.MapGet("/appointments", async (AppDbContext db) => {
+app.MapGet("/api/appointments", async ([FromServices] AppointmentService appointmentService) => {
 
-    ApiResponse response = new();
-    var appoinments = await db.Appointments.ToListAsync();
+    var results = await appointmentService.GetAllAppointments();
 
-    response.Result = appoinments.Select(a => a.toDto()).ToList();
-    response.IsSuccess = true;
-    response.StatusCode = HttpStatusCode.OK;
-    return Results.Ok(response);
-
-    }).WithName("GetAllAppointments").Produces<ApiResponse>(200); ;
+    return results.IsSuccess ? Results.Ok(results) : Results.BadRequest(results); 
+ 
+}).WithName("GetAllAppointments").Produces<ApiResponse>(200); ;
 
 
 //Get patient based on id
-app.MapGet("/Patient/{pId:int}", async (AppDbContext db, int pId) =>
+app.MapGet("/api/Patient/{pId:int}", async ([FromServices] IUserService<Patient, CreatePatientDto> patientService, int pId) =>
 {
-    var patient = await db.Patients.FirstOrDefaultAsync( p => p.Id == pId);
-    if (patient == null)
-    {
-        return Results.NotFound($"Did not find patient with id: {pId}");
-    }
-    return Results.Ok(patient.toDto());
-}).WithName("GetPatient");
+    var results = await patientService.GetUserByID(pId);
 
-app.MapGet("/Doctor/{dId:int}", async (AppDbContext db, int dId) =>
+    return results.IsSuccess ? Results.Ok(results) : Results.BadRequest(results);
+
+}).WithName("GetPatientID");
+
+app.MapGet("/api/Doctor/{pId:int}", async ([FromServices] IUserService<Doctor, CreateDoctorDto> patientService, int pId) =>
 {
-    var doctor = await db.Doctors.FirstOrDefaultAsync(d => d.Id == dId);
-    if (doctor == null)
-    {
-        return Results.NotFound($"Did not find the doctor with id: {dId}");
-    }
+    var results = await patientService.GetUserByID(pId);
 
-    return Results.Ok(doctor.toDto());
+    return results.IsSuccess ? Results.Ok(results) : Results.BadRequest(results);
 
-});
+}).WithName("GetDoctorByID");
 
 
-//add a patientDto to DB
-app.MapPost("/patients", async (AppDbContext db, CreatePatientDto dto) =>
+app.MapPost("/api/create-patient", async ([FromServices] CreatePatientDto dto, [FromServices] UserService<Patient, CreatePatientDto> userService ) =>
 {
-    var patient = dto.ToPatient();
+    var result =  await userService.CreateUser(dto);
 
-    db.Patients.Add(patient);
+    return result.IsSuccess ? Results.Created() : Results.BadRequest(result);
 
-    await db.SaveChangesAsync();
     
-    return Results.Created($"/patients/{patient.Id}", patient.toDto());
-}).WithName("CreatePatient").Produces<ResponsePatientDto>(201).Produces(400);
+}).WithName("CreatePatient").Accepts<CreatePatientDto>("application/json").Produces<ApiResponse>(201).Produces(400);
 
 
-app.MapPost("/appointment", async (AppDbContext db, AppointmentDto dto) =>
+
+app.MapPost("/api/create-doctor", async ([FromServices] CreateDoctorDto dto, [FromServices] UserService<Doctor, CreateDoctorDto> userService) =>
 {
-    ApiResponse response = new() { IsSuccess = false, StatusCode = HttpStatusCode.NotFound, ErrorMessages = new List<string>() }; 
+    var result = await userService.CreateUser(dto);
 
-    var p =  await db.Patients.FirstOrDefaultAsync(p => p.Id == dto.PatientID);
-    var d = await db.Doctors.FirstOrDefaultAsync(d => d.Id == dto.DoctorID);
+    return result.IsSuccess ? Results.Created() : Results.BadRequest(result);
 
-
-    if (p == null || d == null) {
-
-        response.ErrorMessages.Add("Doctor or patient not found");
-
-        return Results.NotFound(response);
-    };
-    var appointment = new Appointment
-   {
-       Patient = p,
-       Doctor = d, 
-       AppointmentDate = dto.Date,
-       Status = dto.Status
-    };
+}).WithName("CreateDoctor").Accepts<CreateDoctorDto>("application/json").Produces<ApiResponse>(201).Produces(400);
 
 
-    db.Appointments.Add(appointment);
-    await db.SaveChangesAsync();
 
-    response.Result = appointment.toDto();
-    response.IsSuccess = true;
-    response.StatusCode = HttpStatusCode.OK;
-
-    return Results.Ok(response);
-
-}).WithName("CreateAppointment").Accepts<AppointmentDto>("json/application").Produces<ApiResponse>(201).Produces(404);
-
-app.MapPost("/Doctor/", async (AppDbContext db, CreateDoctorDto dto) =>
+app.MapPost("/appointment", async ([FromServices] AppointmentService appointmentService, AppointmentDto dto) =>
 {
-    ApiResponse response = new() { IsSuccess = false, StatusCode = HttpStatusCode.BadRequest, ErrorMessages = new List<string>() }; 
+    var result = await appointmentService.CreateAppointment(dto);
+
+    return result.IsSuccess ? Results.Ok() : Results.BadRequest(result);
+
+}).WithName("CreateAppointment").Produces<ApiResponse>(200).Produces(404);
 
 
-    var doctor = dto.toDoctor();
 
-    if (doctor == null)
-    {
-        response.ErrorMessages.Add("Could not create the Doctor object!");
-        return Results.BadRequest(response);
-    }
-
-    db.Doctors.Add(doctor);
-    await db.SaveChangesAsync();
-
-    response.IsSuccess = true;
-    response.StatusCode = HttpStatusCode.OK;
-    
-
-    return Results.Ok(response);
-
-}).WithName("CreateDoctor").Accepts<CreateDoctorDto>("application(json").Produces<ApiResponse>(201).Produces(400);
-
-
-app.MapPost("/JournalEntry", async (AppDbContext db, CreateJournalEntryDto dto) =>
+app.MapPost("/api/create-journalEntry", async ([FromServices] JournalEntryService journalEntryService, CreateJournalEntryDto dto) =>
 {
+    var results = await journalEntryService.CreateJournalEntry(dto);
 
-    ApiResponse response = new() { IsSuccess = false, StatusCode = HttpStatusCode.NotFound, ErrorMessages = new List<string>() };
+    return results.IsSuccess ? Results.Ok(results) : Results.BadRequest(results); 
 
-    var p = await db.Patients.FirstOrDefaultAsync(p => p.Id == dto.PatientID);
-    var d = await db.Doctors.FirstOrDefaultAsync(d => d.Id == dto.DoctorID);
-
-    if (p == null || d == null)
-    {
-        response.ErrorMessages.Add("Could not find the doctor or the patient!");
-
-        return Results.NotFound(response);
-    }
-
-    JournalEntry entry = new JournalEntry
-    {
-        Notes = dto.Notes,
-        DateNTime = dto.DateNTime,
-        Patient = p,
-        PatientID = dto.PatientID,
-        Doctor = d,
-        DoctorID = dto.DoctorID
-
-    };
-
-    db.JournalEntries.Add(entry);
-    await db.SaveChangesAsync();
-
-    response.Result = entry.toDto();
-    response.IsSuccess = true;
-    response.StatusCode = HttpStatusCode.OK;
-    
-    return Results.Ok(response);
-
-}).WithName("CreateJournal").Accepts<CreateJournalEntryDto>("application/json").Produces<ApiResponse>(201).Produces(400);
+}).WithName("CreateJournalEntry").Accepts<CreateJournalEntryDto>("application/json").Produces<ApiResponse>(201).Produces(400);
 
 
-
-
-app.MapGet("/JournalEntries/{id:int}", async (AppDbContext db, int id) =>
+app.MapGet("/api/JournalEntry/{id:int}", async ([FromServices] JournalEntryService journalEntryService, int id) =>
 {
-    ApiResponse response = new() { IsSuccess = false, StatusCode = HttpStatusCode.NotFound, ErrorMessages = new List<string>() };
-    
-    var entry = await db.JournalEntries.FirstOrDefaultAsync(e => e.Id == id);
-    
-    if (entry == null)
-    {
-        response.ErrorMessages.Add("Could not find the journal entry");
-        return Results.NotFound(response);
-    }
-     
-    response.Result = entry.toDto();
-    response.IsSuccess = true;
-    response.StatusCode = HttpStatusCode.OK;
-    return Results.Ok(response);
+    var results = await journalEntryService.GetJournalEntryById(id);
+
+    return results.IsSuccess ? Results.Ok(results) : Results.BadRequest(results); 
 
 }).WithName("GetJournalByID").Produces<ApiResponse>(200).Produces(404);
 
 
-app.MapPost("/Doctors{id:int}/password", async (AppDbContext db, int id, UserService<Doctor> docService, string password, PasswordValidator passwordValidator) =>
+app.MapPut("api/patient/change-password", async (string email, string oldPassword, string newPassowrd, [FromServices] UserService<Patient, CreatePatientDto> patientService) =>
 {
-    ApiResponse response = new() { IsSuccess = false, StatusCode = HttpStatusCode.BadRequest, ErrorMessages = new List<string>() };
+    var result = await patientService.ChangePasswordByEmail(email, newPassowrd, oldPassword);
 
-    //validate password
-    if (!passwordValidator.PasswordValid(password))
-    {
-        response.ErrorMessages.Add("Could not validate the password, please choose a valid password!");
-        return Results.BadRequest(response);
-    }
+    return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
 
-    //hash the pass 
-    response = await docService.SavePasswordToDB(id, password);
+}).WithName("ChangePatientPassword").Produces<ApiResponse>(200).Produces(400);
 
 
-    return Results.Ok(response); 
-
-}).WithName("CreatePassWordDoctor").Produces<ApiResponse>(200).Produces(400);
-
-app.MapPost("/Patients{id:int}/password", async (AppDbContext db, int id, UserService<Patient> patientService, string password, PasswordValidator passwordValidator, ILogger<Program> _logger) =>
+app.MapPut("api/doctor/change-password", async (string email, string oldPassword, string newPassowrd, [FromServices] UserService<Doctor, CreateDoctorDto> patientService) =>
 {
-    ApiResponse response = new() { IsSuccess = false, StatusCode = HttpStatusCode.BadRequest, ErrorMessages = new List<string>() };
+    var result = await patientService.ChangePasswordByEmail(email, newPassowrd, oldPassword);
 
-    _logger.Log(LogLevel.Information, "testing line");
+    return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
 
-    if (!passwordValidator.PasswordValid(password))
-    {
-        _logger.Log(LogLevel.Information, "testing second point");
-        response.ErrorMessages.Add("Could not validate the password, please choose a valid password!");
-        return Results.BadRequest(response);
-    }
-    
-    response = await patientService.SavePasswordToDB(id, password);
+}).WithName("ChangeDoctorPassword").Produces<ApiResponse>(200).Produces(400);
 
 
-    return Results.Ok(response);
+app.MapPost("api/loginPatient/", async ([FromServices] UserService<Patient, CreatePatientDto> userService, LoginDto dto) =>
+{
+    var result = await userService.LogInUserByEmail(dto);
 
-}).WithName("CreatePassWordPatient").Produces<ApiResponse>(200).Produces(400);
+    return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
+}).WithName("PatientLogIn").Produces<ApiResponse>(200).Produces(400);
 
 
- 
+app.MapPost("api/loginDoctor/", async ([FromServices] UserService<Doctor, CreateDoctorDto> userService, LoginDto dto) =>
+{
+    var result = await userService.LogInUserByEmail(dto);
+
+    return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
+}).WithName("DoctorLogIn").Produces<ApiResponse>(200).Produces(400);
+
+
+
 
 app.Run();
 

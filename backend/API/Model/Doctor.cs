@@ -7,7 +7,9 @@ using System.Threading.Tasks;
 namespace API.Model
 {
     using API.dto;
-    public class Doctor : AbstractUser
+    using backend.API.Model;
+
+    public class Doctor : AbstractUser, IConvertToDto<CreateDoctorDto>
     {
         public string Specialization { get; set; } = "";
 
@@ -15,9 +17,9 @@ namespace API.Model
         public List<Appointment> Appointments { get; set; }
         public List<JournalEntry> JournalEntries { get; set; }
 
-        public ResponseDoctorDto toDto()
+        public CreateDoctorDto ToDto()
         {
-            return new ResponseDoctorDto
+            return new CreateDoctorDto
             {
                 FirstName = this.FirstName,
                 LastName = this.LastName,

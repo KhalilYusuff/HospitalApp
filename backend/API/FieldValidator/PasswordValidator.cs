@@ -9,12 +9,12 @@ namespace backend.API.FieldValidator
         {
             try
             {
-                const int minLenght = 12;
+                const int minLength = 12;
                 const string validAlph = "ABCDEFGHJKLMNOPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
                 const string validSpecialChar = "!@$?_-\\*";
                 const string validInt = "1234567890";
 
-                bool validLengh = password.Length > minLenght;
+                bool validLengh = password.Length > minLength;
                 bool ContainsUpperChar = password.Any(c => char.IsUpper(c));
                 bool ContainsMinAlph = password.Any(c => validAlph.Contains(c));
                 bool ContainsSpecialChar = password.Any(c => validSpecialChar.Contains(c));

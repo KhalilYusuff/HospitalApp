@@ -75,7 +75,7 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 
 
-app.MapGet("/api/all-patients", async ([FromServices]IUserService<Patient, CreatePatientDto> patientService, [FromServices] ILogger<Program> _logger) => {
+app.MapGet("/api/get-all-patients", async ([FromServices]IUserService<Patient, CreatePatientDto> patientService, [FromServices] ILogger<Program> _logger) => {
     _logger.Log(LogLevel.Information, "Getting all patients...");
 
     var results = await patientService.GetAllUsers();
@@ -85,7 +85,7 @@ app.MapGet("/api/all-patients", async ([FromServices]IUserService<Patient, Creat
 }).WithName("GetAllPatients").Produces<ApiResponse>(200);
 
 
-app.MapGet("/api/all-doctors", async ([FromServices] IUserService<Doctor, CreateDoctorDto> doctorService, [FromServices] ILogger<Program> _logger) => {
+app.MapGet("/api/get-all-doctors", async ([FromServices] IUserService<Doctor, CreateDoctorDto> doctorService, [FromServices] ILogger<Program> _logger) => {
     _logger.Log(LogLevel.Information, "Getting all patients...");
 
     var results = await doctorService.GetAllUsers();
@@ -95,7 +95,7 @@ app.MapGet("/api/all-doctors", async ([FromServices] IUserService<Doctor, Create
 }).WithName("GetAllDoctors").Produces<ApiResponse>(200);
 
 //get all appointments (Need to create an AppointmentDto)
-app.MapGet("/api/appointments", async ([FromServices] AppointmentService appointmentService) => {
+app.MapGet("/api/get-all-appointments", async ([FromServices] AppointmentService appointmentService) => {
 
     var results = await appointmentService.GetAllAppointments();
 
@@ -105,7 +105,7 @@ app.MapGet("/api/appointments", async ([FromServices] AppointmentService appoint
 
 
 //Get patient based on id
-app.MapGet("/api/Patient/{pId:int}", async ([FromServices] IUserService<Patient, CreatePatientDto> patientService, int pId) =>
+app.MapGet("/api/get-patient/{pId:int}", async ([FromServices] IUserService<Patient, CreatePatientDto> patientService, int pId) =>
 {
     var results = await patientService.GetUserByID(pId);
 
@@ -113,7 +113,8 @@ app.MapGet("/api/Patient/{pId:int}", async ([FromServices] IUserService<Patient,
 
 }).WithName("GetPatientID");
 
-app.MapGet("/api/Doctor/{pId:int}", async ([FromServices] IUserService<Doctor, CreateDoctorDto> patientService, int pId) =>
+
+app.MapGet("/api/get-doctor/{pId:int}", async ([FromServices] IUserService<Doctor, CreateDoctorDto> patientService, int pId) =>
 {
     var results = await patientService.GetUserByID(pId);
 
@@ -143,7 +144,7 @@ app.MapPost("/api/create-doctor", async ([FromServices] CreateDoctorDto dto, [Fr
 
 
 
-app.MapPost("/appointment", async ([FromServices] AppointmentService appointmentService, AppointmentDto dto) =>
+app.MapPost("/create-appointment", async ([FromServices] AppointmentService appointmentService, AppointmentDto dto) =>
 {
     var result = await appointmentService.CreateAppointment(dto);
 
@@ -162,7 +163,7 @@ app.MapPost("/api/create-journalEntry", async ([FromServices] JournalEntryServic
 }).WithName("CreateJournalEntry").Accepts<CreateJournalEntryDto>("application/json").Produces<ApiResponse>(201).Produces(400);
 
 
-app.MapGet("/api/JournalEntry/{id:int}", async ([FromServices] JournalEntryService journalEntryService, int id) =>
+app.MapGet("/api/get-journalentry/{id:int}", async ([FromServices] JournalEntryService journalEntryService, int id) =>
 {
     var results = await journalEntryService.GetJournalEntryById(id);
 

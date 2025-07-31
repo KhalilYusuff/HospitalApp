@@ -8,8 +8,6 @@ namespace backend.API.dto
         {
             List<string> ErrorMessages = [];
         }
-        
-
 
         public Boolean IsSuccess { get; set; }
         public Object Result { get; set; }

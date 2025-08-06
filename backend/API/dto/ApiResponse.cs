@@ -16,5 +16,9 @@ namespace backend.API.dto
 
         public List<string> ErrorMessages { get; set; }
 
+        public string Timestamp { get; set; } = DateTime.UtcNow.ToString("O");
+
+        public string TraceID { get; set; } = "";
+
     }
 }

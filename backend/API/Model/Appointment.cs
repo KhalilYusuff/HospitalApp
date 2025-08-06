@@ -22,14 +22,14 @@ namespace API.Model
 
 
 
-        public AppointmentDto toDto()
+        public AppointmentDto ToDto()
         {
             return new AppointmentDto
             {
-                PatientID = this.Patient.Id,
-                DoctorID = this.Doctor.Id,
-                Date = this.AppointmentDate,
-                Status = this.Status
+                PatientID = PatientId,
+                DoctorID = DoctorId,
+                Date = AppointmentDate,
+                Status = Status
             };
         }
 

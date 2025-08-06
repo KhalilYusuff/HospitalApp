@@ -3,6 +3,7 @@
     using Microsoft.EntityFrameworkCore;
     using API.Model;
     using Microsoft.Identity.Client;
+    using backend.API.Model;
 
     public class AppDbContext : DbContext
     {
@@ -11,6 +12,7 @@
         public DbSet<Doctor> Doctors { get; set; }
         public DbSet<JournalEntry> JournalEntries { get; set; }
         public DbSet<Appointment> Appointments { get; set; }
+        public DbSet<Perscription> Perscriptions { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -29,7 +31,7 @@
                 .HasForeignKey(j => j.PatientID)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            // Fix for CS0029 and CS1662
+            
             modelBuilder.Entity<Appointment>()
                 .HasOne(a => a.Patient)
                 .WithMany(p => p.Appointments)
@@ -42,6 +44,18 @@
                 .WithMany(d => d.Appointments)
                 .HasForeignKey(a => a.DoctorId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<Perscription>()
+                .HasOne(p => p.Patient)
+                .WithMany(p => p.Perscriptions)
+                .HasForeignKey(p => p.PatientId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<Perscription>()
+               .HasOne(p => p.Doctor)
+               .WithMany(d => d.Perscriptions)
+               .HasForeignKey(p => p.DoctorId)
+               .OnDelete(DeleteBehavior.Restrict);
 
         }
     }

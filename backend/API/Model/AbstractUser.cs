@@ -22,6 +22,7 @@ namespace API.Model
         public string LastName { get; set; } = "";
         [Required]
         public char Gender { get; set; }
+        [DataType(DataType.DateTime), Required]
         public DateTime Birthdate { get; set;  }
         [Required, EmailAddress]
         public string Email { get; set; } = "";

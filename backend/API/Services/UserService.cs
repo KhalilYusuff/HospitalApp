@@ -29,20 +29,19 @@ namespace backend.API.Services
       public async Task<ApiResponse> SavePasswordToDB(int iD, string password)
         {
 
-            ApiResponse response = new() { IsSuccess = false, StatusCode = HttpStatusCode.NotFound };
+            var response = new ApiResponse();
 
             var user = await _context.Set<T>().FindAsync(iD);
 
             if (user is null)
             {
-                response.ErrorMessages.Add("User not found");
-                return response; 
+                throw new Exception("User not found");
             }
 
             response.IsSuccess = true;
             response.StatusCode = HttpStatusCode.OK;
 
-            var hashednSalted = HashAndsaltPassword(password);
+            var hashednSalted = _passwordLogic.HashAndsaltPassword(password);
             user.PasswordHash = hashednSalted.passwordHash;
             user.PassWordSalt = hashednSalted.passWordSalt;
 
@@ -51,101 +50,58 @@ namespace backend.API.Services
             return response; 
         }
 
-        public (string passwordHash, string passWordSalt) HashAndsaltPassword(string password)
-        {
-           byte[] salt;
-           var hashedPass = _passwordLogic.HashPass(password, out salt);
 
-           var passwordHash = hashedPass;
-           var passWordSalt = Convert.ToBase64String(salt);
 
-           return (passwordHash, passWordSalt);
-
-        }
-      
-
-        //metoden først validerer nåværende passord og deretter hasher og salter ny passord og returnerer ny hash og ny salt.
-        public (bool success, string message, string? newHash, string? newSalt) ChangePassword(
-            string newPassword, string oldPassword, string storedHash, string storedSalt)
-        {
-
-            var storedSaltBytes = Convert.FromBase64String(storedSalt);
-            var isCorrect = _passwordLogic.VerifyHashPass(oldPassword, storedHash, storedSaltBytes);
-
-            if (!isCorrect)
-            {
-                return (false, "Current password is incorrect", null, null);
-            }
-            if (oldPassword == newPassword)
-            {
-                return (false, "Current password cannot be the same as the new password, please choose a new password", null, null); 
-
-            }
-
-            var (newHash, newSalt) = HashAndsaltPassword(newPassword);
-
-            return (true, "Password changed successfully", newHash, newSalt);
-        }
 
 
         public async Task<ApiResponse> ChangePasswordByEmail(string email, string newPassword, string oldPassword)
         {
 
-            ApiResponse response = new() { IsSuccess = false, StatusCode = HttpStatusCode.BadRequest, ErrorMessages = new List<string>() };
+                var response = new ApiResponse(); 
+                
+                var user = await _context.Set<T>().FirstOrDefaultAsync(u => u.Email.ToLower().Trim() == email.ToLower().Trim());
 
-            var user = await _context.Set<T>().FirstOrDefaultAsync(u => u.Email == email); 
+                if (user is null)
+                {
+                    throw new Exception($"Could not find a user with email: {email}");
+                    
+                }
 
-            if (user is null)
-            {
-                response.ErrorMessages.Add($"Could not find a user with email: {email}");
+                var passChange = _passwordLogic.ChangePassword(newPassword.ToLower().Trim(), oldPassword.ToLower().Trim(), user.PasswordHash, user.PassWordSalt);
+
+                _passwordValidator.PasswordValid(newPassword);
+
+               
+
+                if (!passChange.success)
+                {
+                throw new Exception("An error has occured! Could not change the password"); 
+                }
+
+                user.PasswordHash = passChange.newHash;
+                user.PassWordSalt = passChange.newSalt;
+
+                await _context.SaveChangesAsync();
+
+                response.StatusCode = HttpStatusCode.OK;
+                response.IsSuccess = true;
+
                 return response;
-            }
-
-            if (!_passwordValidator.PasswordValid(newPassword))
-            {
-                response.ErrorMessages.Add("new password is not valid. Choose a valid password");
-                return response;
-            }
-
-            var passChange = ChangePassword(newPassword, oldPassword, user.PasswordHash, user.PassWordSalt);
-
-            if (!passChange.success)
-            {
-                response.ErrorMessages.Add(passChange.message);
-                return response;
-            }
-
-            user.PasswordHash = passChange.newHash;
-            user.PassWordSalt = passChange.newSalt;
-
-            await _context.SaveChangesAsync();
-
-            response.StatusCode = HttpStatusCode.OK;
-            response.IsSuccess = true;
-
-            return response;
-
         }
 
         public async Task<ApiResponse> LogInUserByEmail(LoginDto loginDto)
         {
-            ApiResponse response = new() { IsSuccess = false, StatusCode = HttpStatusCode.BadRequest, ErrorMessages = new List<string>() };
+
+            var response = new ApiResponse();
 
             var user = await _context.Set<T>().FirstOrDefaultAsync(u => u.Email == loginDto.Email); 
 
             if (user is null)
             {
-                response.ErrorMessages.Add("User does not exist");
-                return response;
+                throw new Exception($"Could not find a user with email: {loginDto.Email}");
             }
 
             bool passwordMatch = _passwordLogic.VerifyHashPass(loginDto.Password, user.PasswordHash, Convert.FromBase64String(user.PassWordSalt)); 
-
-            if (!passwordMatch)
-            {
-                response.ErrorMessages.Add("Wrong password, please try again");
-                return response;
-            }
 
             response.IsSuccess = true;
             response.StatusCode = HttpStatusCode.OK;
@@ -174,29 +130,19 @@ namespace backend.API.Services
 
         public async Task<ApiResponse> CreateUser(ICreateUserDto<T> dto)
         {
-            ApiResponse response = new() { IsSuccess = false, StatusCode = HttpStatusCode.BadRequest, ErrorMessages = new List<string>() };
 
-            if (!_passwordValidator.PasswordValid(dto.Password))
-            {
-                response.ErrorMessages.Add("Password is not valid. Please choose a valid password");
-                return response;
-            }
+            var response = new ApiResponse();
 
+            _passwordValidator.PasswordValid(dto.Password);
 
-            var entity = dto.ToEntity();
+            var entity = dto.ToEntity() ?? throw new Exception("Invalid input. Please register a valid patient user");
 
-            if (entity is null)
-            {
-                response.ErrorMessages.Add("Valid input. Please register a valid patient user");
-                return response;
-            }
-
-            var (passwordHash, PasswordSalt) = HashAndsaltPassword(dto.Password);
+            var (passwordHash, PasswordSalt) = _passwordLogic.HashAndsaltPassword(dto.Password);
 
             entity.PasswordHash = passwordHash;
             entity.PassWordSalt = PasswordSalt;
 
-            await _context.Set<T>().AddAsync(entity);
+            response.Result = await _context.Set<T>().AddAsync(entity);
 
             await _context.SaveChangesAsync();
 
@@ -204,18 +150,18 @@ namespace backend.API.Services
             response.StatusCode = HttpStatusCode.Created;
 
             return response;
+
         }
 
         public async Task<ApiResponse> GetUserByID(int id)
         {
-            ApiResponse response = new() { IsSuccess = false, StatusCode = HttpStatusCode.NotFound, ErrorMessages = new List<string>() };
+            var response = new ApiResponse();
 
             var user = await _context.Set<T>().FindAsync(id); 
 
             if (user is null)
             {
-                response.ErrorMessages.Add("User not found");
-                return response; 
+                throw new Exception("User not found");     
             }
 
             response.Result = user.ToDto()!;
@@ -230,7 +176,5 @@ namespace backend.API.Services
         {
             throw new NotImplementedException();
         }
-
-       
     }
 }

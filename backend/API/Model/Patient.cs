@@ -13,6 +13,7 @@ namespace API.Model
 
        public List<Appointment> Appointments { get; set; }
        public List<JournalEntry> JournalEntries { get; set; }
+       public List<Perscription> Perscriptions { get; set; }
 
         public CreatePatientDto ToDto()
         {

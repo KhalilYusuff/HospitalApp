@@ -21,20 +21,7 @@ namespace backend.API.Services
 
             ApiResponse response = new() { IsSuccess = false, StatusCode = HttpStatusCode.BadRequest, ErrorMessages = new List<string>() };
 
-            
-
-
-
-           
-
-
-            JournalEntry journalEntry = dto.ToJournalEntry();
-
-            if (journalEntry is null)
-            {
-                response.ErrorMessages.Add("Journal entry cannot be null. Patient or Doctor object with the specified ID might not exist");
-                return response;
-            }
+            JournalEntry journalEntry = dto.ToJournalEntry() ?? throw new Exception("Journal entry cannot be null. Patient or Doctor object with the specified ID might not exist");
 
             _context.JournalEntries.Add(journalEntry);
 
@@ -52,15 +39,9 @@ namespace backend.API.Services
 
         public async Task<ApiResponse> GetJournalEntryById(int id)
         {
-            ApiResponse response = new() { IsSuccess = false, StatusCode = HttpStatusCode.NotFound, ErrorMessages = new List<string>() };
+            var response = new ApiResponse(); 
 
-            var entry = await _context.JournalEntries.FindAsync(id);
-
-            if (entry == null)
-            {
-                response.ErrorMessages.Add("Could not find the journal entry");
-                return response;
-            }
+            var entry = await _context.JournalEntries.FindAsync(id) ?? throw new Exception("Journal entry not found");
 
             response.Result = entry.toDto();
             response.IsSuccess = true;

@@ -23,6 +23,7 @@ export class DoctorListComponent implements OnInit{
       },
       error: (error) =>{
         console.error('Error while getting doctors ', error);
+       
       }
     })
   }

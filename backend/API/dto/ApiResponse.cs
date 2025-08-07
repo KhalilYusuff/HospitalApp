@@ -19,6 +19,7 @@ namespace backend.API.dto
         public string Timestamp { get; set; } = DateTime.UtcNow.ToString("O");
 
         public string TraceID { get; set; } = "";
+        public string Note { get; set; } = ""; 
 
     }
 }

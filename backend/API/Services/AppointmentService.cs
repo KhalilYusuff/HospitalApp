@@ -97,7 +97,7 @@ namespace backend.API.Services
 
             response.IsSuccess = true;
             response.StatusCode = HttpStatusCode.OK;
-
+          
             if (!patientAppointments.IsNullOrEmpty())
             {
                 response.Result = patientAppointments.Select(a => a.ToDto()).ToList();

@@ -5,4 +5,5 @@ export interface Patient {
   birthdate: string;
   email: string;
   phoneNumber: string;
+  password: string;
 }

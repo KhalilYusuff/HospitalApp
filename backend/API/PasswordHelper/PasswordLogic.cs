@@ -47,7 +47,6 @@ namespace API.PasswordHelper
         public (bool success, string message, string? newHash, string? newSalt) ChangePassword(
         string newPassword, string oldPassword, string storedHash, string storedSalt)
         {
-
             var storedSaltBytes = Convert.FromBase64String(storedSalt);
             var isCorrect = VerifyHashPass(oldPassword, storedHash, storedSaltBytes);
 

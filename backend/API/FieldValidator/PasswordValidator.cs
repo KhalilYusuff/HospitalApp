@@ -11,7 +11,7 @@ namespace backend.API.FieldValidator
           
                 const int minLength = 12;
                 const string validAlph = "ABCDEFGHJKLMNOPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
-                const string validSpecialChar = "!@$?_-\\*";
+                const string validSpecialChar = "!@$?_-\\*&+";
                 const string validInt = "1234567890";
 
                 bool validLengh = password.Length > minLength;

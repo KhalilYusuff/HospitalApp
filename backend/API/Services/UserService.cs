@@ -31,12 +31,7 @@ namespace backend.API.Services
 
             var response = new ApiResponse();
 
-            var user = await _context.Set<T>().FindAsync(iD);
-
-            if (user is null)
-            {
-                throw new Exception("User not found");
-            }
+            var user = await _context.Set<T>().FindAsync(iD) ?? throw new Exception("User not found"); ;
 
             response.IsSuccess = true;
             response.StatusCode = HttpStatusCode.OK;
@@ -50,28 +45,18 @@ namespace backend.API.Services
             return response; 
         }
 
-
-
-
-
         public async Task<ApiResponse> ChangePasswordByEmail(string email, string newPassword, string oldPassword)
         {
 
                 var response = new ApiResponse(); 
                 
-                var user = await _context.Set<T>().FirstOrDefaultAsync(u => u.Email.ToLower().Trim() == email.ToLower().Trim());
+                var user = await _context.Set<T>().FirstOrDefaultAsync(u => u.Email.ToLower().Trim() == email.ToLower().Trim()) ?? throw new Exception($"Could not find a user with email: {email}"); ;
 
-                if (user is null)
-                {
-                    throw new Exception($"Could not find a user with email: {email}");
-                    
-                }
+             
 
                 var passChange = _passwordLogic.ChangePassword(newPassword.ToLower().Trim(), oldPassword.ToLower().Trim(), user.PasswordHash, user.PassWordSalt);
 
                 _passwordValidator.PasswordValid(newPassword);
-
-               
 
                 if (!passChange.success)
                 {
@@ -94,12 +79,7 @@ namespace backend.API.Services
 
             var response = new ApiResponse();
 
-            var user = await _context.Set<T>().FirstOrDefaultAsync(u => u.Email == loginDto.Email); 
-
-            if (user is null)
-            {
-                throw new Exception($"Could not find a user with email: {loginDto.Email}");
-            }
+            var user = await _context.Set<T>().FirstOrDefaultAsync(u => u.Email == loginDto.Email) ?? throw new Exception($"Could not find a user with email: {loginDto.Email}"); 
 
             bool passwordMatch = _passwordLogic.VerifyHashPass(loginDto.Password, user.PasswordHash, Convert.FromBase64String(user.PassWordSalt)); 
 
@@ -157,12 +137,7 @@ namespace backend.API.Services
         {
             var response = new ApiResponse();
 
-            var user = await _context.Set<T>().FindAsync(id); 
-
-            if (user is null)
-            {
-                throw new Exception("User not found");     
-            }
+            var user = await _context.Set<T>().FindAsync(id) ?? throw new Exception("User not found");
 
             response.Result = user.ToDto()!;
             response.StatusCode = HttpStatusCode.Found; 

@@ -3,5 +3,7 @@ export interface ApiResponse<T>{
     result: T; 
     statusCode: number; 
     errorMessages: string[] | null; 
+    TraceID: string; 
+    Note: string; 
 
 }

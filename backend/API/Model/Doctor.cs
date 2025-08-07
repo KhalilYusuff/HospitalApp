@@ -12,10 +12,10 @@ namespace API.Model
     public class Doctor : AbstractUser, IConvertToDto<CreateDoctorDto>
     {
         public string Specialization { get; set; } = "";
-
-
         public List<Appointment> Appointments { get; set; }
         public List<JournalEntry> JournalEntries { get; set; }
+
+        public List<Perscription> Perscriptions { get; set; }
 
         public CreateDoctorDto ToDto()
         {

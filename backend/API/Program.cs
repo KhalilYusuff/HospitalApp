@@ -30,9 +30,11 @@ builder.Services.AddScoped(typeof(IUserService<,>), typeof(UserService<,>));
 builder.Services.AddScoped<PasswordLogic>();
 builder.Services.AddScoped<AppointmentService>();
 builder.Services.AddScoped<JournalEntryService>();
+//builder.Services.AddScoped<HttpContext>(); 
+        
 
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen(options =>
+builder.Services.AddSwaggerGen(options =>   
 {
     options.SwaggerDoc("v1", new OpenApiInfo
     {
@@ -70,136 +72,183 @@ if (app.Environment.IsDevelopment())
 
 }
 
- 
 
+app.UseMiddleware<ExceptionMiddleware>();
 app.UseHttpsRedirection();
 
 
-app.MapGet("/api/all-patients", async ([FromServices]IUserService<Patient, CreatePatientDto> patientService, [FromServices] ILogger<Program> _logger) => {
-    _logger.Log(LogLevel.Information, "Getting all patients...");
+app.MapGet("/api/get-all-patients", async ([FromServices]IUserService<Patient, CreatePatientDto> patientService, HttpContext context) => {
+    
 
     var results = await patientService.GetAllUsers();
+    results.TraceID = context.TraceIdentifier; 
 
     return results.IsSuccess ? Results.Ok(results) : Results.BadRequest(results); 
  
 }).WithName("GetAllPatients").Produces<ApiResponse>(200);
 
 
-app.MapGet("/api/all-doctors", async ([FromServices] IUserService<Doctor, CreateDoctorDto> doctorService, [FromServices] ILogger<Program> _logger) => {
-    _logger.Log(LogLevel.Information, "Getting all patients...");
-
+app.MapGet("/api/get-all-doctors", async ([FromServices] IUserService<Doctor, CreateDoctorDto> doctorService, HttpContext context) => {
+    
     var results = await doctorService.GetAllUsers();
+    results.TraceID = context.TraceIdentifier; 
 
     return results.IsSuccess ? Results.Ok(results) : Results.BadRequest(results);
 
 }).WithName("GetAllDoctors").Produces<ApiResponse>(200);
 
-//get all appointments (Need to create an AppointmentDto)
-app.MapGet("/api/appointments", async ([FromServices] AppointmentService appointmentService) => {
+
+app.MapGet("/api/get-all-appointments", async ([FromServices] AppointmentService appointmentService, HttpContext context) => {
 
     var results = await appointmentService.GetAllAppointments();
+    results.TraceID = context.TraceIdentifier; 
 
     return results.IsSuccess ? Results.Ok(results) : Results.BadRequest(results); 
  
 }).WithName("GetAllAppointments").Produces<ApiResponse>(200); ;
 
+app.MapGet("/api/patient-appointment{Id:int}", async ([FromServices] AppointmentService appointmentService, HttpContext context, int Id) =>
+{
+    var results = await appointmentService.GetAppointmentsForPatient(Id);
+    results.TraceID = context.TraceIdentifier;
+
+    return results.IsSuccess ? Results.Ok(results) : Results.BadRequest(results); 
+
+}).WithName("GetAppointmentsByPatientID").Produces<ApiResponse>(200);
+
+app.MapGet("/api/doctor-appointment{Id:int}", async ([FromServices] AppointmentService appointmentService, int Id, HttpContext context) =>
+{
+    var result = await appointmentService.GetAppointmentsForDoctor(Id);
+    result.TraceID = context.TraceIdentifier;
+
+    return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
+
+}).WithName("GetAppointmentsByDoctorID");
+
+app.MapGet("/api/patient-upcomming-appointments{id:int}", async ([FromServices] AppointmentService appointmentService, int id, HttpContext context) =>
+{
+    var result = await appointmentService.GetUpcomingAppointmentsForPatient(id);
+    result.TraceID = context.TraceIdentifier;
+
+    return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
+
+}).WithName("GetUpcomingAppointments").Produces<ApiResponse>(200).Produces(400);
+
+app.MapGet("/api/patient-previous-appointments{id:int}", async ([FromServices] AppointmentService appointmentService, int id, HttpContext context) =>
+{
+    var result = await appointmentService.GetPreviousAppointmensForPatient(id);
+    result.TraceID = context.TraceIdentifier;
+
+    return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result); 
+});
 
 //Get patient based on id
-app.MapGet("/api/Patient/{pId:int}", async ([FromServices] IUserService<Patient, CreatePatientDto> patientService, int pId) =>
+app.MapGet("/api/get-patient/{pId:int}", async ([FromServices] IUserService<Patient, CreatePatientDto> patientService, int pId, HttpContext context) =>
 {
     var results = await patientService.GetUserByID(pId);
+    results.TraceID = context.TraceIdentifier;
 
     return results.IsSuccess ? Results.Ok(results) : Results.BadRequest(results);
 
 }).WithName("GetPatientID");
 
-app.MapGet("/api/Doctor/{pId:int}", async ([FromServices] IUserService<Doctor, CreateDoctorDto> patientService, int pId) =>
+
+app.MapGet("/api/get-doctor/{pId:int}", async ( IUserService<Doctor, CreateDoctorDto> patientService, int pId, HttpContext context) =>
 {
     var results = await patientService.GetUserByID(pId);
+    results.TraceID = context.TraceIdentifier;
 
     return results.IsSuccess ? Results.Ok(results) : Results.BadRequest(results);
 
 }).WithName("GetDoctorByID");
 
 
-app.MapPost("/api/create-patient", async ([FromServices] CreatePatientDto dto, [FromServices] UserService<Patient, CreatePatientDto> userService ) =>
+app.MapPost("/api/create-patient", async ( CreatePatientDto dto, [FromServices] IUserService<Patient, CreatePatientDto> userService, HttpContext context ) =>
 {
     var result =  await userService.CreateUser(dto);
-
-    return result.IsSuccess ? Results.Created() : Results.BadRequest(result);
+    result.TraceID = context.TraceIdentifier; 
+    return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
 
     
 }).WithName("CreatePatient").Accepts<CreatePatientDto>("application/json").Produces<ApiResponse>(201).Produces(400);
 
 
 
-app.MapPost("/api/create-doctor", async ([FromServices] CreateDoctorDto dto, [FromServices] UserService<Doctor, CreateDoctorDto> userService) =>
+app.MapPost("/api/create-doctor", async ( CreateDoctorDto dto, [FromServices] IUserService<Doctor, CreateDoctorDto> userService, HttpContext context) =>
 {
     var result = await userService.CreateUser(dto);
+    result.TraceID = context.TraceIdentifier;
 
-    return result.IsSuccess ? Results.Created() : Results.BadRequest(result);
+    return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
 
 }).WithName("CreateDoctor").Accepts<CreateDoctorDto>("application/json").Produces<ApiResponse>(201).Produces(400);
 
 
 
-app.MapPost("/appointment", async ([FromServices] AppointmentService appointmentService, AppointmentDto dto) =>
+app.MapPost("/create-appointment", async ([FromServices] AppointmentService appointmentService, AppointmentDto dto, HttpContext context) =>
 {
     var result = await appointmentService.CreateAppointment(dto);
+    result.TraceID = context.TraceIdentifier;
 
-    return result.IsSuccess ? Results.Ok() : Results.BadRequest(result);
+    return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
 
 }).WithName("CreateAppointment").Produces<ApiResponse>(200).Produces(404);
 
 
 
-app.MapPost("/api/create-journalEntry", async ([FromServices] JournalEntryService journalEntryService, CreateJournalEntryDto dto) =>
+app.MapPost("/api/create-journalEntry", async ([FromServices] JournalEntryService journalEntryService, CreateJournalEntryDto dto, HttpContext context) =>
 {
     var results = await journalEntryService.CreateJournalEntry(dto);
+    results.TraceID = context.TraceIdentifier;
 
     return results.IsSuccess ? Results.Ok(results) : Results.BadRequest(results); 
 
 }).WithName("CreateJournalEntry").Accepts<CreateJournalEntryDto>("application/json").Produces<ApiResponse>(201).Produces(400);
 
 
-app.MapGet("/api/JournalEntry/{id:int}", async ([FromServices] JournalEntryService journalEntryService, int id) =>
+app.MapGet("/api/get-journalentry/{id:int}", async ([FromServices] JournalEntryService journalEntryService, int id, HttpContext context) =>
 {
     var results = await journalEntryService.GetJournalEntryById(id);
+    results.TraceID = context.TraceIdentifier;
 
     return results.IsSuccess ? Results.Ok(results) : Results.BadRequest(results); 
 
 }).WithName("GetJournalByID").Produces<ApiResponse>(200).Produces(404);
 
 
-app.MapPut("api/patient/change-password", async (string email, string oldPassword, string newPassowrd, [FromServices] UserService<Patient, CreatePatientDto> patientService) =>
+app.MapPut("api/patient/change-password", async (string email, string oldPassword, string newPassowrd, [FromServices] IUserService<Patient, CreatePatientDto> patientService, HttpContext context) =>
 {
     var result = await patientService.ChangePasswordByEmail(email, newPassowrd, oldPassword);
+    result.TraceID = context.TraceIdentifier;
 
     return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
 
 }).WithName("ChangePatientPassword").Produces<ApiResponse>(200).Produces(400);
 
 
-app.MapPut("api/doctor/change-password", async (string email, string oldPassword, string newPassowrd, [FromServices] UserService<Doctor, CreateDoctorDto> patientService) =>
+app.MapPut("api/doctor/change-password", async (string email, string oldPassword, string newPassword, [FromServices] IUserService<Doctor, CreateDoctorDto> patientService, HttpContext context) =>
 {
-    var result = await patientService.ChangePasswordByEmail(email, newPassowrd, oldPassword);
+    var result = await patientService.ChangePasswordByEmail(email, newPassword, oldPassword);
+    result.TraceID = context.TraceIdentifier;
 
     return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
 
 }).WithName("ChangeDoctorPassword").Produces<ApiResponse>(200).Produces(400);
 
 
-app.MapPost("api/loginPatient/", async ([FromServices] UserService<Patient, CreatePatientDto> userService, LoginDto dto) =>
+app.MapPost("api/loginPatient/", async ([FromServices] UserService<Patient, CreatePatientDto> userService, LoginDto dto, HttpContext context) =>
 {
     var result = await userService.LogInUserByEmail(dto);
+    result.TraceID = context.TraceIdentifier;
 
     return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
 }).WithName("PatientLogIn").Produces<ApiResponse>(200).Produces(400);
 
 
-app.MapPost("api/loginDoctor/", async ([FromServices] UserService<Doctor, CreateDoctorDto> userService, LoginDto dto) =>
+app.MapPost("api/loginDoctor/", async ([FromServices] UserService<Doctor, CreateDoctorDto> userService, LoginDto dto, HttpContext context) =>
 {
     var result = await userService.LogInUserByEmail(dto);
+    result.TraceID = context.TraceIdentifier;
 
     return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
 }).WithName("DoctorLogIn").Produces<ApiResponse>(200).Produces(400);

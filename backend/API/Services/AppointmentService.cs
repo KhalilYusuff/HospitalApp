@@ -2,7 +2,10 @@
 using API.dto;
 using API.Model;
 using backend.API.dto;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using System.ComponentModel.DataAnnotations;
 using System.Net;
 
 namespace backend.API.Services
@@ -12,8 +15,6 @@ namespace backend.API.Services
 
         private readonly AppDbContext _context;
         
-
-
         public AppointmentService(AppDbContext context)
         {
             _context = context;
@@ -23,23 +24,39 @@ namespace backend.API.Services
         public async Task<ApiResponse> CreateAppointment(AppointmentDto dto)
         {
 
-            ApiResponse response = new() { IsSuccess = false, StatusCode = HttpStatusCode.BadRequest, ErrorMessages = new List<string>() };
+            var response = new ApiResponse();
+
+            if (dto.EndDate <= dto.StarteDate)
+            {
+                throw new Exception("End date cannot be less than or equal to start date");
+            }
 
             Patient? patient = await _context.Patients.FirstOrDefaultAsync(p => p.Id == dto.PatientID);
-            Doctor? doctor = await _context.Doctors.FirstOrDefaultAsync(d => d.Id == dto.DoctorID); 
+            Doctor? doctor = await _context.Doctors.FirstOrDefaultAsync(d => d.Id == dto.DoctorID);
 
             if (patient is null || doctor is null)
             {
-                response.ErrorMessages.Add("Could not find the specified user");
-                return response;
+                throw new Exception("User does not exist");
+                
             }
 
-            Appointment appointment = new() { Patient = patient, Doctor = doctor, AppointmentDate = dto.Date, Status = dto.Status };
+            bool isDoctorBusy = await _context.Appointments.AnyAsync(a => a.DoctorId == dto.DoctorID
+                                                                && a.StartDate < dto.EndDate
+                                                               && a.EndDate > dto.StarteDate);
+           
+            if (isDoctorBusy)
+            {
+                throw new ValidationException("Doctor is busy at the chosen appointment time");
+            }
+
+            Appointment appointment = new() { Patient = patient, Doctor = doctor, 
+                                                StartDate = dto.StarteDate, EndDate = dto.EndDate ,Status = dto.Status };
 
             await _context.Appointments.AddAsync(appointment);
 
             await _context.SaveChangesAsync();
 
+            response.Result = appointment.ToDto(); 
             response.IsSuccess = true;
             response.StatusCode = HttpStatusCode.OK;
 
@@ -49,40 +66,123 @@ namespace backend.API.Services
 
         public async Task<ApiResponse> GetAllAppointments()
         {
-            ApiResponse response = new() { IsSuccess = false, StatusCode = HttpStatusCode.BadRequest, ErrorMessages = new List<string>() };
+            var response = new ApiResponse(); 
 
-            response.Result = await _context.Appointments.ToListAsync(); 
-
-            if (response.Result is null)
-            {
-                response.ErrorMessages.Add("There are no appointments");
-                return response; 
-            }
+            var result = await _context.Appointments.ToListAsync();
 
             response.IsSuccess = true;
             response.StatusCode = HttpStatusCode.OK;
 
+            if (!result.IsNullOrEmpty())
+            {
+               response.Result = result.Select(a => a.ToDto()).ToList();
+            }
+
+            response.Note = $"No appointments found";
             return response; 
         }
 
 
-        public async Task<ApiResponse> GetAllPatientAppointmentsByPId(int id)
+        public async Task<ApiResponse> GetAppointmentsForPatient(int id)
         {
-            ApiResponse response = new() { IsSuccess = false, StatusCode = HttpStatusCode.BadRequest, ErrorMessages = new List<string>() };
+            var response = new ApiResponse(); 
 
-            var patientAppointments = await _context.Appointments.Where(a => a.PatientId == id).ToListAsync(); 
-
-            if (patientAppointments is null)
+            var patient = await _context.Patients.FindAsync(id);
+            if (patient is null)
             {
-                response.ErrorMessages.Add("The specified patient has no appointments");
-                return response;
+                throw new Exception("Given ID does not exist or does not belong to a patient");
             }
 
+            var patientAppointments = await _context.Appointments.Where(a => a.PatientId == id).ToListAsync();
+
             response.IsSuccess = true;
-            response.Result = patientAppointments;
             response.StatusCode = HttpStatusCode.OK;
+          
+            if (!patientAppointments.IsNullOrEmpty())
+            {
+                response.Result = patientAppointments.Select(a => a.ToDto()).ToList();
+            }
+
+            response.Note = $"There are no Appointments for {patient.FirstName} {patient.LastName}";
 
             return response; 
+
+        }
+        public async Task<ApiResponse> GetUpcomingAppointmentsForPatient(int id)
+        {
+            var response = new ApiResponse();
+
+            var patient = await _context.Patients.FindAsync(id) ?? throw new Exception("User with the given ID does not exist");
+
+            var upcomingAppointments = await _context.Appointments.Where(a => a.PatientId == id
+                                                                         && a.EndDate > DateTime.Now).ToListAsync();
+            response.StatusCode = HttpStatusCode.OK;
+            response.IsSuccess = true;
+
+            if (!upcomingAppointments.IsNullOrEmpty())
+            {
+                response.Result = upcomingAppointments.Select(a => a.ToDto()).ToList(); 
+                return response;  
+            }
+
+
+            response.Note = $"There are no upcoming appointments for {patient.FirstName} {patient.LastName}";
+            return response; 
+
+
+
+        }
+
+        public async Task<ApiResponse> GetPreviousAppointmensForPatient(int id)
+        {
+            var response = new ApiResponse();
+
+            var patient = await _context.Patients.FindAsync(id); 
+            if (patient is null)
+            {
+                throw new Exception("User does not exist"); 
+            }
+
+            var previousAppoiontments = await _context.Appointments.Where(a => a.PatientId == id
+                                                                           && a.EndDate < DateTime.Now).ToListAsync();
+            
+            response.StatusCode = HttpStatusCode.OK;
+            response.IsSuccess = true; 
+
+            if (!previousAppoiontments.IsNullOrEmpty())
+            {
+                response.Result = previousAppoiontments.Select(a => a.ToDto()).ToList();
+                return response; 
+                
+            }
+
+            response.Note = $"There are no upcoming appointments for {patient.FirstName} {patient.LastName}";
+            return response; 
+        }
+
+        public async Task<ApiResponse> GetAppointmentsForDoctor(int id)
+        {
+            var response = new ApiResponse(); 
+
+            var doctor = await _context.Doctors.FindAsync(id); 
+            if (doctor is null)
+            {
+                throw new Exception("Given ID does not exist or does not belong a doctor"); 
+            }
+
+            var doctorAppointments = await _context.Appointments.Where(a => a.DoctorId == id).ToListAsync();
+            response.IsSuccess = true;
+
+            response.StatusCode = HttpStatusCode.OK;
+
+            if (!doctorAppointments.IsNullOrEmpty())
+            {
+                response.Result = doctorAppointments.Select(a => a.ToDto()).ToList();
+                return response;  
+            }
+            response.Note = $"There are no Appointments for {doctor.FirstName} {doctor.LastName}";
+
+            return response;
 
         }
 

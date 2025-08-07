@@ -8,8 +8,6 @@ namespace backend.API.dto
         {
             List<string> ErrorMessages = [];
         }
-        
-
 
         public Boolean IsSuccess { get; set; }
         public Object Result { get; set; }
@@ -17,6 +15,11 @@ namespace backend.API.dto
         public HttpStatusCode StatusCode { get; set; }
 
         public List<string> ErrorMessages { get; set; }
+
+        public string Timestamp { get; set; } = DateTime.UtcNow.ToString("O");
+
+        public string TraceID { get; set; } = "";
+        public string Note { get; set; } = ""; 
 
     }
 }

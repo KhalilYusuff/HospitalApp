@@ -4,6 +4,7 @@ using System.Security.Cryptography;
 namespace API.PasswordHelper
 {
     using Microsoft.EntityFrameworkCore.Metadata.Conventions;
+    using System.ComponentModel.DataAnnotations;
     using System.Security.Cryptography;
     using System.Text;
 
@@ -34,31 +35,57 @@ namespace API.PasswordHelper
             var hashAlgo = HashAlgorithmName.SHA512;
             var hashToCompare = Rfc2898DeriveBytes.Pbkdf2(password, salt, iterations, hashAlgo, keySize);
 
+            if (!CryptographicOperations.FixedTimeEquals(hashToCompare, Convert.FromHexString(hash)))
+            {
+                throw new Exception("Incorrect password");
+            }
+
             return CryptographicOperations.FixedTimeEquals(hashToCompare, Convert.FromHexString(hash));
         }
 
 
-        public  string GenerateRanDomPass(int length)
+        public (bool success, string message, string? newHash, string? newSalt) ChangePassword(
+        string newPassword, string oldPassword, string storedHash, string storedSalt)
+        {
+            var storedSaltBytes = Convert.FromBase64String(storedSalt);
+            var isCorrect = VerifyHashPass(oldPassword, storedHash, storedSaltBytes);
+
+
+            if (oldPassword == newPassword)
+            {
+               throw new ValidationException("Current password cannot be the same as the new password, please choose a new password");
+            }
+
+            var (newHash, newSalt) = HashAndsaltPassword(newPassword);
+
+            return (true, "Password changed successfully", newHash, newSalt);
+        }
+
+        public (string passwordHash, string passWordSalt) HashAndsaltPassword(string password)
+        {
+            byte[] salt;
+            var hashedPass = HashPass(password, out salt);
+
+            var passwordHash = hashedPass;
+            var passWordSalt = Convert.ToBase64String(salt);
+
+            return (passwordHash, passWordSalt);
+
+        }
+
+        public string GenerateRanDomPass(int length)
         {
             const string validChars = "ABCDEFGHJKLMNOPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz0123456789!@$?_-";
 
             var bytes = RandomNumberGenerator.GetBytes(length);
 
-            var chars = new char[length]; 
+            var chars = new char[length];
 
             for (int i = 0; i < length; i++)
             {
-                chars[i] = validChars[bytes[i] % validChars.Length]; 
+                chars[i] = validChars[bytes[i] % validChars.Length];
             }
-            return new string(chars); 
+            return new string(chars);
         }
-
-
-        public bool PasswordValidate(string password)
-        {
-            return false; 
-                
-            
-        }
-	}
+    }
 }

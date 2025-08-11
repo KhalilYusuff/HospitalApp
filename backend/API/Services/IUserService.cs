@@ -15,7 +15,9 @@ namespace backend.API.Services
 
         Task<ApiResponse> GetAllUsers();
 
-        Task<ApiResponse> GetUserByID(int id); 
+        Task<ApiResponse> GetUserByID(int id);
+
+        Task<ApiResponse>LogInUserByEmail(LoginDto dto);
 
 
 

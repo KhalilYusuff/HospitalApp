@@ -19,7 +19,7 @@ namespace backend.API.Services
         public async Task<ApiResponse> CreateJournalEntry(CreateJournalEntryDto dto)
         {
 
-            ApiResponse response = new() { IsSuccess = false, StatusCode = HttpStatusCode.BadRequest, ErrorMessages = new List<string>() };
+            var response = new ApiResponse(); 
 
             JournalEntry journalEntry = dto.ToJournalEntry() ?? throw new Exception("Journal entry cannot be null. Patient or Doctor object with the specified ID might not exist");
 

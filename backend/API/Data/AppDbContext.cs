@@ -23,39 +23,39 @@
                 .HasOne(j => j.Doctor)
                 .WithMany(d => d.JournalEntries)
                 .HasForeignKey(j => j.DoctorID)
-                .OnDelete(DeleteBehavior.Cascade);
+                .OnDelete(DeleteBehavior.Restrict);
 
             modelBuilder.Entity<JournalEntry>()
                 .HasOne(j => j.Patient)
                 .WithMany(p => p.JournalEntries)
                 .HasForeignKey(j => j.PatientID)
-                .OnDelete(DeleteBehavior.Cascade);
+                .OnDelete(DeleteBehavior.Restrict);
 
             
             modelBuilder.Entity<Appointment>()
                 .HasOne(a => a.Patient)
                 .WithMany(p => p.Appointments)
                 .HasForeignKey(a => a.PatientId)
-                .OnDelete(DeleteBehavior.Cascade);
+                .OnDelete(DeleteBehavior.Restrict);
 
 
             modelBuilder.Entity<Appointment>()
                 .HasOne(a => a.Doctor)
                 .WithMany(d => d.Appointments)
                 .HasForeignKey(a => a.DoctorId)
-                .OnDelete(DeleteBehavior.Cascade);
+                .OnDelete(DeleteBehavior.Restrict);
 
             modelBuilder.Entity<Perscription>()
                 .HasOne(p => p.Patient)
                 .WithMany(p => p.Perscriptions)
                 .HasForeignKey(p => p.PatientId)
-                .OnDelete(DeleteBehavior.Cascade);
+                .OnDelete(DeleteBehavior.Restrict);
 
             modelBuilder.Entity<Perscription>()
                .HasOne(p => p.Doctor)
                .WithMany(d => d.Perscriptions)
                .HasForeignKey(p => p.DoctorId)
-               .OnDelete(DeleteBehavior.Cascade);
+               .OnDelete(DeleteBehavior.Restrict);
 
         }
     }

@@ -16,7 +16,11 @@ namespace backend.API.Endpoints
 
                 return results.IsSuccess ? Results.Ok(results) : Results.BadRequest(results);
 
+<<<<<<< Updated upstream
             }).WithName("GetAllAppointments").Produces<ApiResponse>(200); ;
+=======
+            }).WithName("GetAllAppointments").Produces<ApiResponse>(200); 
+>>>>>>> Stashed changes
 
             app.MapGet("/api/appointments/patient{Id:int}", async ([FromServices] AppointmentService appointmentService, HttpContext context, int Id) =>
             {

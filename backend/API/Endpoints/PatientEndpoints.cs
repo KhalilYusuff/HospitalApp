@@ -55,6 +55,18 @@ namespace backend.API.Endpoints
                 return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
             }).WithName("PatientLogIn").Produces<ApiResponse>(200).Produces(400);
 
+<<<<<<< Updated upstream
+=======
+            app.MapDelete("api/patients/{id:int}/delete", async ([FromServices] IUserService<Patient, CreatePatientDto> userService, HttpContext context, int id) =>
+            {
+                var result = await userService.DeleteUser(id);
+                result.TraceID = context.TraceIdentifier;
+
+                return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
+
+            }).WithName("DeleteUserByID").Produces<ApiResponse>(200).Produces(400);
+
+>>>>>>> Stashed changes
 
         }
 

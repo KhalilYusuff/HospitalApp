@@ -147,9 +147,18 @@ namespace backend.API.Services
 
         }
 
-        public Task<ApiResponse> DeleteUser(int id)
+        public async Task<ApiResponse> DeleteUser(int id)
         {
-            throw new NotImplementedException();
+            var response = new ApiResponse();
+
+            await _context.Set<T>().Where(t => t.Id == id).ExecuteDeleteAsync();
+
+            await _context.SaveChangesAsync();
+
+            response.IsSuccess = true;
+            response.StatusCode = HttpStatusCode.OK;
+
+            return response; 
         }
     }
 }

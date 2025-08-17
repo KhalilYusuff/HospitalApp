@@ -1,6 +1,7 @@
 ﻿using backend.API.dto;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -20,6 +21,8 @@ namespace API.Model
         public Doctor Doctor { get; set; }
         public int DoctorID { get; set; }
 
+        [Timestamp]
+        public byte[] Version { get; set; }
         public CreateJournalEntryDto toDto()
         {
 

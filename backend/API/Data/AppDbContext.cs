@@ -4,6 +4,7 @@
     using API.Model;
     using Microsoft.Identity.Client;
     using backend.API.Model;
+    using Namotion.Reflection;
 
     public class AppDbContext : DbContext
     {
@@ -16,14 +17,22 @@
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
+            modelBuilder.Entity<AbstractUser>()
+                .Property(d => d.Version)
+                .IsRowVersion();
+
             modelBuilder.Entity<Doctor>().HasBaseType<AbstractUser>();
             modelBuilder.Entity<Patient>().HasBaseType<AbstractUser>();
 
             modelBuilder.Entity<JournalEntry>()
+                .Property(j => j.Version)
+                .IsRowVersion();
+            modelBuilder.Entity<JournalEntry>()
                 .HasOne(j => j.Doctor)
                 .WithMany(d => d.JournalEntries)
                 .HasForeignKey(j => j.DoctorID)
-                .OnDelete(DeleteBehavior.Restrict);
+                .OnDelete(DeleteBehavior.Restrict)
+                ;
 
             modelBuilder.Entity<JournalEntry>()
                 .HasOne(j => j.Patient)
@@ -31,7 +40,11 @@
                 .HasForeignKey(j => j.PatientID)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            
+
+
+            modelBuilder.Entity<Appointment>()
+                .Property(a => a.Version)
+                .IsRowVersion();
             modelBuilder.Entity<Appointment>()
                 .HasOne(a => a.Patient)
                 .WithMany(p => p.Appointments)
@@ -45,6 +58,9 @@
                 .HasForeignKey(a => a.DoctorId)
                 .OnDelete(DeleteBehavior.Restrict);
 
+            modelBuilder.Entity<Perscription>()
+               .Property(p => p.Version)
+               .IsRowVersion();
             modelBuilder.Entity<Perscription>()
                 .HasOne(p => p.Patient)
                 .WithMany(p => p.Perscriptions)

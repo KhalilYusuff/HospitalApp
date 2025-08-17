@@ -24,7 +24,10 @@
         public Patient Patient { get; set; } = null!;
         [Required]
         public int DoctorId { get; set; }
-        public Doctor Doctor { get; set; } = null!; 
+        public Doctor Doctor { get; set; } = null!;
+
+        [Timestamp]
+        public byte[] Version { get; set; }
 
         public PerscriptionDto ToDto()
         {

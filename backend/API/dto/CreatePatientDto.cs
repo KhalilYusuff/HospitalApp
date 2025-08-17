@@ -8,6 +8,7 @@ namespace API.dto
 
     public class CreatePatientDto : ICreateUserDto<Patient>
     {
+        public int Id { get; set; }
         [Required, MinLength(2), MaxLength(30)]
         public string FirstName { get; set; } = "";
         [Required, MinLength(2), MaxLength(30)]

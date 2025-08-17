@@ -2,6 +2,7 @@
 using backend.API.dto;
 using Microsoft.AspNetCore.Http;
 using System.ComponentModel.DataAnnotations;
+using System.Data;
 using System.Diagnostics;
 using System.Net;
 
@@ -45,6 +46,7 @@ namespace backend.API.FieldValidator
             {
                 ValidationException => StatusCodes.Status400BadRequest,
                 KeyNotFoundException => StatusCodes.Status404NotFound,
+                DBConcurrencyException => StatusCodes.Status409Conflict,
                 _ => StatusCodes.Status500InternalServerError
             };
 

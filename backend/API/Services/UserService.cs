@@ -160,5 +160,16 @@ namespace backend.API.Services
 
             return response; 
         }
+
+        /*  public async Task<ApiResponse> UpdateUser(ICreateUserDto<T> userDto)
+          {
+              var response = new ApiResponse();
+
+              var existingUser = await _context.Set<T>().FirstOrDefaultAsync(u => u.Id == userDto.Id) 
+                      ?? throw new Exception("Could not find the specified user"); 
+          }
+
+          */
+
     }
 }

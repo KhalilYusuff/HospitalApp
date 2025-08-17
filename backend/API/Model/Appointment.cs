@@ -27,7 +27,8 @@ namespace API.Model
         [Required]
         public string Status { get; set; } = "";
 
-
+        [Timestamp]
+        public byte[] Version { get; set; }
 
         public AppointmentDto ToDto()
         {

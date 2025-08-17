@@ -39,6 +39,8 @@ namespace API.Model
         public char Country { get; set; }
         [Required]
         public string PostalCode { get; set; } = "";
+        [Timestamp]
+        public byte[] Version { get; set; }
 
 
     }
